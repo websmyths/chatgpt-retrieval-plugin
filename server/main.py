@@ -1,9 +1,11 @@
 import os
 from typing import Optional
+from typing import Dict
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, Depends, Body, UploadFile
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
+from google.cloud import secretmanager
 
 from models.api import (
     DeleteRequest,
@@ -18,8 +20,17 @@ from services.file import get_document_from_file
 
 from models.models import DocumentMetadata, Source
 
+def get_secret(secret_name: str, project_id: str = "chatgpt-retrieval-plugin1") -> str:
+    client = secretmanager.SecretManagerServiceClient()
+    secret_version_path = client.secret_version_path(project_id, secret_name, "latest")
+    secret_response = client.access_secret_version(request={"name": secret_version_path})
+    return secret_response.payload.data.decode("UTF-8")
+
+
 bearer_scheme = HTTPBearer()
-BEARER_TOKEN = os.environ.get("BEARER_TOKEN")
+# BEARER_TOKEN = os.environ.get("BEARER_TOKEN")
+BEARER_TOKEN = get_secret("your_secret_name")
+
 assert BEARER_TOKEN is not None
 
 
